@@ -1,0 +1,25 @@
+#install dependencies
+numpy
+deepface
+opencv-python
+!pip install tensorflow==2.4.1 tensorflow-gpu==2.4.1 opencv-python matplotlib
+
+
+# Import standard dependencies
+import cv2
+import os
+import random
+import numpy as np
+from matplotlib import pyplot as plt
+
+
+# Import tensorflow dependencies - Functional API
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Conv2D, Dense, MaxPooling2D, Input, Flatten
+import tensorflow as tf
+
+
+# Avoid OOM errors by setting GPU Memory Consumption Growth
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus: 
+    tf.config.experimental.set_memory_growth(gpu, True)

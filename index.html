@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Matching</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .container {
+            border: 5px solid #ccc;
+            /* Light border */
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .box {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .upload-button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .upload-button:hover {
+            background-color: #0056b3;
+        }
+
+        #imagePreview,
+        #videoPreview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-bottom: 20px;
+        }
+
+        #resultContainer,
+        #waitContainer {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #resultContainer img {
+            max-width: 100%;
+            max-height: 200px;
+            margin-bottom: 10px;
+        }
+
+        .timestamp {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Matching</h1>
+    <div class="container">
+        <h2>Upload Image</h2>
+        <div class="box">
+            <input type="file" id="imageInput" name="image" accept="image/*">
+            <button type="button" class="upload-button" id="uploadImageButton">Upload Image</button>
+        </div>
+        <div class="box" id="imagePreviewContainer" style="display: none;">
+            <h2>Image Preview</h2>
+            <img src="" alt="Image Preview" id="imagePreview">
+            <p id="uploadMessage"></p>
+        </div>
+
+        <h2>Upload Video</h2>
+        <div class="box">
+            <input type="file" id="videoInput" name="video" accept="video/*">
+            <button type="button" class="upload-button" id="uploadVideoButton">Upload Video</button>
+        </div>
+        <div class="box" id="videoPreviewContainer" style="display: none;">
+            <h2>Video Preview</h2>
+            <video controls id="videoPreview"></video>
+            <p id="videoUploadMessage"></p>
+        </div>
+        <button id="startButton">START</button>
+    </div>
+
+    <div id="waitContainer">
+        <h2>Wait</h2>
+        <p>Please wait for the process to get completed...</p>
+    </div>
+
+    <div id="resultContainer">
+        <h2>Result</h2>
+        <div id="resultImages"></div>
+    </div>
+
+    <script>
+        const uploadImageButton = document.getElementById('uploadImageButton');
+        const uploadVideoButton = document.getElementById('uploadVideoButton');
+        const startButton = document.getElementById('startButton');
+        const imageInput = document.getElementById('imageInput');
+        const videoInput = document.getElementById('videoInput');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const videoPreview = document.getElementById('videoPreview');
+        const uploadMessage = document.getElementById('uploadMessage');
+        const videoUploadMessage = document.getElementById('videoUploadMessage');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultImagesContainer = document.getElementById('resultImages');
+        const waitContainer = document.getElementById('waitContainer');
+
+        uploadImageButton.addEventListener('click', () => {
+            const file = imageInput.files[0];
+            if (!file) {
+                alert('Please select an image to upload.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('image', file);
+
+            fetch('/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to upload image');
+                    }
+                    console.log('Image uploaded successfully');
+                    imagePreview.src = URL.createObjectURL(file);
+                    imagePreviewContainer.style.display = 'block';
+                    uploadMessage.textContent = 'Uploaded successfully';
+                })
+                .catch(error => {
+                    console.error('Error uploading image:', error);
+                });
+        });
+
+        uploadVideoButton.addEventListener('click', () => {
+            const file = videoInput.files[0];
+            if (!file) {
+                alert('Please select a video to upload.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('video', file);
+
+            fetch('/upload-video', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to upload video');
+                    }
+                    console.log('Video uploaded successfully');
+                    videoPreview.src = URL.createObjectURL(file);
+                    videoPreviewContainer.style.display = 'block';
+                    videoUploadMessage.textContent = 'Uploaded successfully';
+                })
+                .catch(error => {
+                    console.error('Error uploading video:', error);
+                });
+        });
+
+        startButton.addEventListener('click', () => {
+            waitContainer.style.display = 'block'; // Show wait message
+            resultContainer.style.display = 'none'; // Hide result container
+
+            fetch('/start-python')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to start Python script');
+                    }
+                    console.log('Python script started successfully');
+                    return response.json();
+                })
+                .then(resultFrames => {
+                    // Hide wait message
+                    waitContainer.style.display = 'none';
+                    // Display result images with timestamps
+                    resultContainer.style.display = 'block';
+                    resultImagesContainer.innerHTML = '';
+                    resultFrames.forEach(frame => {
+                        const img = document.createElement('img');
+                        img.src = `/result-images/${frame.filename}`;
+                        resultImagesContainer.appendChild(img);
+                        const timestamp = document.createElement('p');
+                        timestamp.textContent = `Timestamp: ${frame.timestamp.toFixed(2)} seconds`;
+                        timestamp.className = 'timestamp';
+                        resultImagesContainer.appendChild(timestamp);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error starting Python script:', error);
+                    // Hide wait message in case of error
+                    waitContainer.style.display = 'none';
+                });
+        });
+
+        // Preview image on file selection
+        imageInput.addEventListener('change', () => {
+            const file = imageInput.files[0];
+            if (file) {
+                imagePreview.src = URL.createObjectURL(file);
+                imagePreviewContainer.style.display = 'block';
+                uploadMessage.textContent = ''; // Clear previous message
+            } else {
+                imagePreview.src = '';
+                imagePreviewContainer.style.display = 'none';
+            }
+        });
+
+        // Preview video on file selection
+        videoInput.addEventListener('change', () => {
+            const file = videoInput.files[0];
+            if (file) {
+                videoPreview.src = URL.createObjectURL(file);
+                videoPreviewContainer.style.display = 'block';
+                videoUploadMessage.textContent = ''; // Clear previous message
+            } else {
+                videoPreview.src = '';
+                videoPreviewContainer.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
